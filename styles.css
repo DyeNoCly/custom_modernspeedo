@@ -1,0 +1,68 @@
+@font-face { font-family: 'Orbitron'; font-weight: 500; font-display: swap; src: url('/fonts/orbitron-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Orbitron'; font-weight: 700; font-display: swap; src: url('/fonts/orbitron-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Orbitron'; font-weight: 900; font-display: swap; src: url('/fonts/orbitron-latin-900-normal.woff2') format('woff2'); }
+
+:root { --cyan: #17d4ff; --orange: #ff9d1c; --red: #ff2d55; --green: #38ff6b; --amber: #ffb347; --blue: #2f7bff; }
+
+* {
+    user-select: none;
+    user-drag: none;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body { width: 100%; height: 100%; overflow: hidden; }
+
+body {
+    background-color: transparent !important;
+    font-family: 'Orbitron', Arial, sans-serif;
+}
+
+main {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    width: 500px;
+    height: 330px;
+    transform-origin: bottom right;
+    filter: drop-shadow(0 0 14px rgba(23, 212, 255, .25));
+}
+
+#gauge { width: 100%; height: 100%; display: block; }
+
+/* teks SVG */
+.rpmLabel  { fill: #d6f6ff; font-size: 18px; font-weight: 700; letter-spacing: 3px; }
+.unit      { fill: var(--cyan); font-size: 15px; font-weight: 700; }
+.small     { fill: var(--cyan); font-size: 13px; font-weight: 700; letter-spacing: 1px; }
+.bigOrange { fill: var(--orange); font-size: 26px; font-weight: 900; }
+.info      { fill: #bfeaff; font-size: 11.5px; font-weight: 700; letter-spacing: .5px; }
+.redline   { fill: #bfeaff; font-size: 11px; font-weight: 500; }
+.revText   { fill: var(--red); font-size: 15px; font-weight: 900; letter-spacing: 1px; }
+
+/* kecepatan */
+#speedWrap { position: relative; width: 200px; height: 90px; text-align: center; font-weight: 900; font-size: 78px; line-height: 90px; }
+#ghost { position: absolute; inset: 0; color: rgba(23, 212, 255, .06); letter-spacing: 2px; }
+#speed { position: absolute; inset: 0; letter-spacing: 2px; }
+#speed span { color: var(--cyan); text-shadow: 0 0 10px rgba(23, 212, 255, .9); }
+#speed span:last-child { color: var(--orange); text-shadow: 0 0 10px rgba(255, 157, 28, .9); }
+
+/* segmen gauge */
+.seg { fill: none; stroke-width: 15; stroke-linecap: butt; opacity: .16; transition: opacity .06s; }
+.seg.on { opacity: 1; filter: drop-shadow(0 0 3px currentColor); }
+
+/* REV */
+#rev { opacity: .25; transition: opacity .1s; }
+#rev.on { opacity: 1; animation: blink .35s steps(2) infinite; filter: drop-shadow(0 0 6px var(--red)); }
+
+/* ikon indikator */
+.ico   { fill: none; stroke: #9fd8ea; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: .2; transition: opacity .15s; }
+.arrow { fill: #9fd8ea; opacity: .2; transition: opacity .15s; }
+.arrow.on { fill: var(--green); opacity: 1; filter: drop-shadow(0 0 5px var(--green)); animation: blink .7s steps(2) infinite; }
+#headlights.low  { opacity: 1; stroke: var(--green); filter: drop-shadow(0 0 4px var(--green)); }
+#headlights.high { opacity: 1; stroke: var(--blue);  filter: drop-shadow(0 0 5px var(--blue)); }
+#headlights.high .beam { stroke-width: 3; }
+#seatbelts.ok   { opacity: 1; stroke: var(--green); filter: drop-shadow(0 0 4px var(--green)); }
+#seatbelts.warn { opacity: 1; stroke: var(--red); filter: drop-shadow(0 0 5px var(--red)); animation: blink .8s steps(2) infinite; }
+
+@keyframes blink { 50% { opacity: .3; } }

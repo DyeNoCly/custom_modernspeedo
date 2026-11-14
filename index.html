@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Speedometer</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <main id="hud" class="speedometer">
+        <svg id="gauge" viewBox="0 0 500 330" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="frameGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#3b4a63"/><stop offset="1" stop-color="#1b2232"/>
+                </linearGradient>
+                <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="2.2" result="b"/>
+                    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+            </defs>
+
+            <!-- frame -->
+            <path d="M22 20 H112 L124 8 H376 L388 20 H478 V300 L466 312 H34 L22 300 Z"
+                  fill="rgba(6,12,22,.82)" stroke="url(#frameGrad)" stroke-width="5"/>
+            <path d="M30 28 H118 L130 16 H370 L382 28 H470 V296 L460 305 H40 L30 296 Z"
+                  fill="none" stroke="#17d4ff" stroke-opacity=".35" stroke-width="1.5"/>
+            <path d="M26 120 V70 M474 120 V70" stroke="#17d4ff" stroke-width="3" opacity=".8" filter="url(#glow)"/>
+
+            <!-- dekorasi -->
+            <g id="hexL" fill="none" stroke="#c93bff" stroke-opacity=".7" stroke-width="1.2"></g>
+            <g id="hexC" fill="none" stroke="#17d4ff" stroke-opacity=".18" stroke-width="1.2"></g>
+
+            <!-- indikator atas: sein kiri, lampu, sabuk | REV, sein kanan -->
+            <g id="indicator-left" class="arrow" transform="translate(40,40)"><path d="M0 11 L14 0 V7 H26 V15 H14 V22 Z"/></g>
+            <g id="headlights" class="ico" transform="translate(84,40)">
+                <path d="M12 2 C22 2 28 8 28 12 C28 16 22 22 12 22 Z"/>
+                <path class="beam" d="M0 7 L7 9 M0 12 L7 12 M0 17 L7 15"/>
+            </g>
+            <g id="seatbelts" class="ico" transform="translate(130,40)">
+                <circle cx="11" cy="5" r="4"/>
+                <path d="M3 22 V14 C3 11 6 10 11 10 C16 10 19 11 19 14 V22"/>
+                <path d="M5 11 L18 21"/>
+            </g>
+            <g id="rev">
+                <rect x="352" y="38" width="48" height="26" rx="4" fill="rgba(255,45,85,.12)" stroke="#ff2d55" stroke-width="2"/>
+                <text x="376" y="57" text-anchor="middle" class="revText">REV</text>
+            </g>
+            <g id="indicator-right" class="arrow" transform="translate(436,40)"><path d="M26 11 L12 0 V7 H0 V15 H12 V22 Z"/></g>
+
+            <!-- gauge RPM -->
+            <g id="seg"></g>
+            <g id="labels" fill="#d6f6ff" font-size="15" font-weight="700" text-anchor="middle"></g>
+            <g id="rpm"><line id="needle" x1="250" y1="215" x2="250" y2="215" stroke="#fff" stroke-width="2.5" filter="url(#glow)"/></g>
+
+            <text x="250" y="116" text-anchor="middle" class="rpmLabel">RPM</text>
+            <rect x="205" y="123" width="90" height="3" rx="1.5" fill="#ff2d55" opacity=".85"/>
+            <line x1="180" y1="126" x2="320" y2="126" stroke="#17d4ff" stroke-opacity=".5"/>
+
+            <!-- kecepatan -->
+            <foreignObject x="150" y="130" width="200" height="90">
+                <div xmlns="http://www.w3.org/1999/xhtml" id="speedWrap">
+                    <span id="ghost">888</span>
+                    <span id="speed"><span id="s1">&nbsp;</span><span id="s2">&nbsp;</span><span id="s3">0</span></span>
+                </div>
+            </foreignObject>
+            <line x1="185" y1="221" x2="315" y2="221" stroke="#ff9d1c" stroke-width="3" filter="url(#glow)"/>
+            <text id="unit" x="326" y="205" class="unit">km/h</text>
+            <text id="redlineTxt" x="390" y="80" text-anchor="middle" class="redline"></text>
+
+            <!-- bensin -->
+            <g transform="translate(86,262)" fill="none" stroke="#17d4ff" stroke-width="2.4" filter="url(#glow)">
+                <rect x="0" y="0" width="22" height="34" rx="3"/>
+                <rect x="4" y="5" width="14" height="10" fill="#17d4ff" fill-opacity=".35"/>
+                <path d="M22 8 L30 14 V28 a3 3 0 0 0 6 0 V10 L30 4"/>
+            </g>
+            <text x="146" y="263" class="small">FUEL</text>
+            <text id="fuel" x="146" y="288" class="bigOrange">0%</text>
+
+            <!-- gigi -->
+            <path d="M218 254 H284 L292 262 V298 L284 306 H218 L210 298 V262 Z" fill="rgba(23,212,255,.06)" stroke="#17d4ff" stroke-opacity=".7"/>
+            <text x="251" y="270" text-anchor="middle" class="small">GEAR</text>
+            <text id="gear" x="251" y="296" text-anchor="middle" class="bigOrange">N/R</text>
+
+            <!-- mesin / health / odometer -->
+            <text x="306" y="261" class="info">ENGINE: <tspan id="engine" fill="#7f8da3">--</tspan></text>
+            <text x="306" y="278" class="info">HEALTH: <tspan id="health" fill="#7f8da3">--</tspan></text>
+            <text x="306" y="295" class="info">DISTANCE: <tspan id="odometer" fill="#ffb347">0.0 KM</tspan></text>
+        </svg>
+    </main>
+    <script src="/script.js"></script>
+</body>
+</html>
