@@ -14,6 +14,9 @@ const CONFIG = {
     redline: 8500,    // lampu REV menyala mulai nilai ini
     gaugeMax: 12000,  // angka paling kanan pada busur gauge
     margin: 15,       // jarak HUD dari tepi (px), sama seperti template
+    scale: 0.6,       // ukuran HUD: 1 = 520x380 px, 0.6 = kompak di pojok kanan bawah (bisa diganti lewat ?scale=0.5 di URL)
+    engineAnim: true, // animasi saat mesin mati / hidup (false = langsung ganti tanpa animasi)
+    bootMs: 900,      // durasi sapuan jarum (self-test) saat mesin hidup
 };
 
 // 0: KMH, 1: MPH, 2: Knots (sesuai template)
@@ -57,8 +60,11 @@ const pt = (r, deg) => [CX + r * Math.cos(rad(deg)), CY + r * Math.sin(rad(deg))
 
 /** @param {boolean} state true = mesin menyala */
 function setEngine(value) {
-    state.engine = !!value;
+    const next = !!value, prev = state.engine;
+    state.engine = next;
+    if (prev !== null && prev !== next) playEngineAnim(next);
     renderEngine();
+    renderRevLight();
 }
 
 /** @param {number} speed kecepatan dalam meter/detik (m/s) */
@@ -131,8 +137,25 @@ function setOdometer(distance) {
 
 // ---------------- Render ----------------
 
+let bootStart = -Infinity;
+let animTimer = 0;
+
+// Animasi mesin: mati = kedip + meredup + jarum turun pelan; hidup = kedip + jarum menyapu (self-test)
+function playEngineAnim(on) {
+    if (!ready || !CONFIG.engineAnim) return;
+    const hud = elements.hud;
+    hud.classList.remove('shutdown', 'boot');
+    void hud.offsetWidth; // restart animasi CSS
+    hud.classList.add(on ? 'boot' : 'shutdown');
+    if (on) bootStart = performance.now();
+    clearTimeout(animTimer);
+    animTimer = setTimeout(() => hud.classList.remove('shutdown', 'boot'), 1000);
+}
+
 function renderEngine() {
-    if (!ready || state.engine === null) return;
+    if (!ready) return;
+    elements.hud.classList.toggle('off', state.engine === false);
+    if (state.engine === null) return;
     elements.engine.textContent = state.engine ? 'ON' : 'OFF';
     elements.engine.setAttribute('fill', state.engine ? '#38ff6b' : '#ff2d55');
 }
@@ -203,12 +226,12 @@ function renderOdometer() {
 
 function renderRevLight() {
     if (!ready) return;
-    elements.rev.classList.toggle('on', state.rpm * CONFIG.rpmFull >= CONFIG.redline);
+    elements.rev.classList.toggle('on', state.engine !== false && state.rpm * CONFIG.rpmFull >= CONFIG.redline);
 }
 
 // ---- Busur RPM ----
 function colorAt(t) { // cyan -> hijau -> kuning -> merah
-    const stops = [[0, [23, 212, 255]], [.35, [40, 255, 120]], [.62, [255, 230, 60]], [.8, [255, 120, 40]], [1, [255, 40, 70]]];
+    const stops = [[0, [23, 212, 255]], [.2, [40, 255, 170]], [.4, [90, 255, 90]], [.58, [235, 255, 60]], [.68, [255, 150, 40]], [.74, [255, 50, 70]], [1, [200, 20, 60]]];
     for (let i = 1; i < stops.length; i++) {
         if (t <= stops[i][0]) {
             const [t0, c0] = stops[i - 1], [t1, c1] = stops[i], k = (t - t0) / (t1 - t0);
@@ -218,7 +241,38 @@ function colorAt(t) { // cyan -> hijau -> kuning -> merah
     return 'rgb(255,40,70)';
 }
 
+function arcPath(r, a0, a1) {
+    const [x0, y0] = pt(r, a0), [x1, y1] = pt(r, a1);
+    return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+
+function svgEl(name, attrs, parent) {
+    const e = document.createElementNS(NS, name);
+    Object.keys(attrs).forEach(k => e.setAttribute(k, attrs[k]));
+    parent.appendChild(e);
+    return e;
+}
+
+function buildTicks() {
+    const g = elements.ticks, end = START + SWEEP;
+    const redA = START + (CONFIG.redline / CONFIG.gaugeMax) * SWEEP;
+    // alas gelap di belakang segmen + ring dalam
+    svgEl('path', { d: arcPath((R_OUT + R_IN) / 2, START - 2, end + 2), stroke: '#050c17', 'stroke-width': 22, fill: 'none', opacity: .92 }, g);
+    svgEl('path', { d: arcPath(R_IN - 6, START, end), stroke: '#17d4ff', 'stroke-opacity': .35, 'stroke-width': 1, fill: 'none' }, g);
+    // ring luar: cyan sampai redline, merah setelahnya
+    svgEl('path', { d: arcPath(R_OUT + 8, START, redA), stroke: '#17d4ff', 'stroke-opacity': .8, 'stroke-width': 1.4, fill: 'none' }, g);
+    svgEl('path', { d: arcPath(R_OUT + 8, redA, end), stroke: '#ff2d55', 'stroke-width': 2, fill: 'none' }, g).setAttribute('filter', 'url(#glow)');
+    // tick: besar tiap 1000 RPM, kecil tiap 500
+    for (let i = 0; i <= LABEL_MAX * 2; i++) {
+        const a = START + (i / (LABEL_MAX * 2)) * SWEEP, major = i % 2 === 0, red = a >= redA;
+        const [x0, y0] = pt(R_OUT + 9, a), [x1, y1] = pt(R_OUT + (major ? 15 : 12), a);
+        svgEl('line', { x1: x0, y1: y0, x2: x1, y2: y1, stroke: red ? '#ff2d55' : '#17d4ff',
+            'stroke-opacity': major ? .9 : .5, 'stroke-width': major ? 1.8 : 1 }, g);
+    }
+}
+
 function buildGauge() {
+    buildTicks();
     const step = SWEEP / SEGMENTS, gap = step * 0.22, rm = (R_OUT + R_IN) / 2;
     for (let i = 0; i < SEGMENTS; i++) {
         const a0 = START + i * step + gap / 2, a1 = START + (i + 1) * step - gap / 2;
@@ -236,7 +290,7 @@ function buildGauge() {
         t.setAttribute('x', x); t.setAttribute('y', y + 5); t.textContent = i;
         elements.labels.appendChild(t);
     }
-    const hex = (cx, cy, r) => {
+    const hexPath = (cx, cy, r) => {
         let d = '';
         for (let k = 0; k < 6; k++) {
             const a = rad(60 * k + 30);
@@ -244,17 +298,26 @@ function buildGauge() {
         }
         return d + 'Z';
     };
-    const addHex = (parent, cx, cy, r) => {
-        const p = document.createElementNS(NS, 'path');
-        p.setAttribute('d', hex(cx, cy, r)); parent.appendChild(p);
+    // honeycomb: sel axial (q, r), isi = warna sel terisi
+    const honeycomb = (parent, cx, cy, r, cells, fill) => {
+        const d = r * Math.sqrt(3) + 1.5;
+        cells.forEach(([q, rr, filled]) => {
+            const p = document.createElementNS(NS, 'path');
+            p.setAttribute('d', hexPath(cx + d * (q + rr / 2), cy + d * 0.8660254 * rr, r));
+            if (filled) { p.setAttribute('fill', fill); p.setAttribute('fill-opacity', .3); }
+            parent.appendChild(p);
+        });
     };
-    [[62, 100], [78, 92], [62, 114], [78, 126], [94, 100], [94, 114]].forEach(([x, y]) => addHex(elements.hexL, x, y, 9));
-    [[160, 170], [176, 162], [160, 184], [176, 194], [192, 170], [192, 184]].forEach(([x, y]) => addHex(elements.hexC, x, y, 10));
+    honeycomb(elements.hexL, 68, 120, 10, [[0, 0, 1], [1, 0], [0, 1], [-1, 1, 1], [-1, 0], [0, -1], [1, -1]], '#c93bff');
+    honeycomb(elements.hexC, 158, 188, 9, [[0, 0], [1, 0, 1], [0, 1], [-1, 1], [-1, 0, 1], [0, -1], [1, -1]], '#17d4ff');
 }
 
 function animate() {
-    const target = state.rpm * CONFIG.rpmFull;
-    shownRpm += (target - shownRpm) * 0.35;
+    let target = state.engine === false ? 0 : state.rpm * CONFIG.rpmFull;
+    let ease = state.engine === false && CONFIG.engineAnim ? 0.07 : 0.35; // mesin mati: jarum turun pelan
+    const bt = (performance.now() - bootStart) / CONFIG.bootMs;
+    if (CONFIG.engineAnim && bt >= 0 && bt < 1) { target = CONFIG.gaugeMax * Math.sin(Math.PI * bt); ease = 0.4; } // self-test
+    shownRpm += (target - shownRpm) * ease;
     if (Math.abs(target - shownRpm) < 1) shownRpm = target;
     const t = clamp01(shownRpm / CONFIG.gaugeMax);
     const lit = Math.round(t * SEGMENTS);
@@ -263,19 +326,23 @@ function animate() {
     const [x1, y1] = pt(100, ang), [x2, y2] = pt(R_OUT + 6, ang);
     elements.needle.setAttribute('x1', x1); elements.needle.setAttribute('y1', y1);
     elements.needle.setAttribute('x2', x2); elements.needle.setAttribute('y2', y2);
+    elements.needleTip.setAttribute('cx', x2); elements.needleTip.setAttribute('cy', y2);
     requestAnimationFrame(animate);
 }
 
 // Skala otomatis bila area tampil (iframe) lebih kecil dari HUD
 function fit() {
     const m = CONFIG.margin * 2;
-    const s = Math.min(1, (window.innerWidth - m) / 500, (window.innerHeight - m) / 330);
-    elements.hud.style.transform = `scale(${Math.max(0.2, s)})`;
+    const q = parseFloat(new URLSearchParams(window.location.search).get('scale'));
+    const want = Number.isFinite(q) && q > 0 ? q : CONFIG.scale;
+    // tidak pernah lebih besar dari area tampil (iframe kecil tetap muat)
+    const s = Math.min(want, (window.innerWidth - m) / 520, (window.innerHeight - m) / 380);
+    elements.hud.style.transform = `scale(${Math.max(0.1, s)})`;
 }
 
 // ---------------- Inisialisasi ----------------
 function init() {
-    const ids = ['hud', 'seg', 'labels', 'hexL', 'hexC', 'needle', 'rev', 'unit', 'redlineTxt',
+    const ids = ['hud', 'seg', 'labels', 'hexL', 'hexC', 'needle', 'rev', 'unit', 'redlineTxt', 'ticks', 'needleTip', 'offTag',
         's1', 's2', 's3', 'engine', 'speed', 'rpm', 'fuel', 'health', 'gear',
         'headlights', 'seatbelts', 'odometer'];
     ids.forEach(id => { elements[id] = document.getElementById(id); });
@@ -283,7 +350,7 @@ function init() {
     elements.right = document.getElementById('indicator-right');
 
     elements.hud.style.right = elements.hud.style.bottom = `${CONFIG.margin}px`;
-    elements.redlineTxt.textContent = `REDLINE ${CONFIG.redline}`;
+    elements.redlineTxt.textContent = `${CONFIG.redline} RPM`;
 
     buildGauge();
     ready = true;

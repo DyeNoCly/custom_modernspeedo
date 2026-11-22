@@ -23,8 +23,8 @@ main {
     position: fixed;
     bottom: 15px;
     right: 15px;
-    width: 500px;
-    height: 330px;
+    width: 520px;
+    height: 380px;
     transform-origin: bottom right;
     filter: drop-shadow(0 0 14px rgba(23, 212, 255, .25));
 }
@@ -32,12 +32,12 @@ main {
 #gauge { width: 100%; height: 100%; display: block; }
 
 /* teks SVG */
-.rpmLabel  { fill: #d6f6ff; font-size: 18px; font-weight: 700; letter-spacing: 3px; }
+.rpmLabel  { fill: #d6f6ff; font-size: 18px; font-weight: 700; letter-spacing: 4px; filter: drop-shadow(0 0 4px rgba(23,212,255,.7)); }
 .unit      { fill: var(--cyan); font-size: 15px; font-weight: 700; }
 .small     { fill: var(--cyan); font-size: 13px; font-weight: 700; letter-spacing: 1px; }
 .bigOrange { fill: var(--orange); font-size: 26px; font-weight: 900; }
 .info      { fill: #bfeaff; font-size: 11.5px; font-weight: 700; letter-spacing: .5px; }
-.redline   { fill: #bfeaff; font-size: 11px; font-weight: 500; }
+.redline   { fill: #ffb3c0; font-size: 8.5px; font-weight: 700; letter-spacing: .3px; }
 .revText   { fill: var(--red); font-size: 15px; font-weight: 900; letter-spacing: 1px; }
 
 /* kecepatan */
@@ -49,7 +49,7 @@ main {
 
 /* segmen gauge */
 .seg { fill: none; stroke-width: 15; stroke-linecap: butt; opacity: .16; transition: opacity .06s; }
-.seg.on { opacity: 1; filter: drop-shadow(0 0 3px currentColor); }
+.seg.on { opacity: 1; }
 
 /* REV */
 #rev { opacity: .25; transition: opacity .1s; }
@@ -66,3 +66,20 @@ main {
 #seatbelts.warn { opacity: 1; stroke: var(--red); filter: drop-shadow(0 0 5px var(--red)); animation: blink .8s steps(2) infinite; }
 
 @keyframes blink { 50% { opacity: .3; } }
+
+/* garis scan halus */
+#sweep { animation: sweep 5s linear infinite; }
+@keyframes sweep { from { transform: translateY(-40px); } to { transform: translateY(330px); } }
+
+/* ---- animasi mesin mati / hidup ---- */
+#gauge { transition: filter .6s ease; }
+main.off #gauge { filter: brightness(.55) saturate(.55); }
+.offTag { fill: var(--red); font-size: 13px; font-weight: 700; letter-spacing: 3px; opacity: 0; filter: drop-shadow(0 0 5px rgba(255,45,85,.9)); }
+main.off .offTag { opacity: 1; animation: blinkSlow 1.4s steps(2) infinite; }
+main.off #unit { opacity: 0; }
+main.off #speed span, main.off #speed span:last-child { text-shadow: none; }
+main.shutdown #gauge { animation: powerDown .9s linear; }
+main.boot #gauge { animation: powerUp .6s linear; }
+@keyframes powerDown { 0% { opacity: 1; } 8% { opacity: .25; } 16% { opacity: .95; } 28% { opacity: .2; } 42% { opacity: .8; } 56% { opacity: .3; } 75% { opacity: .65; } 100% { opacity: 1; } }
+@keyframes powerUp   { 0% { opacity: .25; } 15% { opacity: .9; } 30% { opacity: .3; } 50% { opacity: 1; } 65% { opacity: .6; } 100% { opacity: 1; } }
+@keyframes blinkSlow { 50% { opacity: .25; } }

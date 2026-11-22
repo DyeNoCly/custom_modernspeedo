@@ -26,7 +26,7 @@ Fungsi aman dipanggil sebelum DOM siap; nilainya disimpan lalu dirender setelah 
 
 ## Pengaturan
 Ubah `CONFIG` di bagian atas `script.js`: `rpmFull` (RPM saat `setRPM(1)`), `redline` (lampu REV), `gaugeMax`, `margin`.
-HUD otomatis mengecil jika area tampil lebih kecil dari 500×330 px.
+HUD tampil kompak di pojok kanan bawah (`CONFIG.scale = 0.6`, sekitar 312×228 px). Ukuran bisa diubah lewat `CONFIG.scale` atau parameter URL, misalnya `index.html?scale=0.5`. HUD juga otomatis mengecil jika area tampil (iframe) lebih kecil dari ukurannya.
 
 ## Contoh
 ```javascript
@@ -42,3 +42,9 @@ setSeatbelts(true);
 setSpeedMode(0);       // KMH
 setOdometer(123.4);    // 123.4 mil
 ```
+
+## Animasi mesin
+- `setEngine(false)`: HUD berkedip lalu meredup, jarum RPM turun pelan ke 0, lampu REV mati, muncul tulisan **ENGINE OFF**.
+- `setEngine(true)` setelah mati: HUD berkedip dan jarum menyapu ke ujung lalu kembali (self-test).
+- Panggilan pertama `setEngine(...)` (belum ada status sebelumnya) langsung menampilkan keadaan akhir tanpa animasi.
+- Matikan animasi dengan `CONFIG.engineAnim = false` di `script.js`; durasi sapuan diatur lewat `CONFIG.bootMs`.
